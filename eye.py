@@ -24,35 +24,31 @@ pyautogui.moveTo(screen_w // 2, screen_h // 2)
 
 
 while True:
-    _, frame = cam.read() # 첫 번째 변수 무시하고 두 번째 변수가 오른쪽 프레임에 카메라를 호출함
+    _, frame = cam.read()
     frame = cv2.flip(frame, 1)
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     output = face_mesh.process(rgb_frame)
     landmarks_points = output.multi_face_landmarks
     frame_h, frame_w, _ = frame.shape
     if landmarks_points:
-        landmarks = landmarks_points[0].landmark  # 관심을 갖는 얼굴이 하나뿐
-        for id, landmark in enumerate(landmarks[474 : 478]):
-            x = int(landmark.x * frame_w)
-            y = int(landmark.y * frame_h)
-            cv2.circle(frame, (x, y), 3, (0, 255, 0)) # 얼굴 랜드마크 감지
-            if id == 1:
-                move_x = x - prev_x
-                move_y = y - prev_y
-                pyautogui.move(move_x * 10, move_y * 10, duration = 0.1) #duration은 마우스 이동에 걸리는 시간(초)을 나타내는 옵션으로, 이 값을 작게 설정할수록 더 빠르게 이동하고, 크게 설정할수록 더 느리게 이동한다.
-                prev_x, prev_y = x, y
-        left = [landmarks[145], landmarks[159]]
-        for landmark in left:
-            x = int(landmark.x * frame_w)
-            y = int(landmark.y * frame_h)
-            cv2.circle(frame, (x, y), 3, (0, 255, 255))  # 얼굴 랜드마크 감지
-        if((left[0].y - left[1].y) < 0.003):
-            pyautogui.click()
-            pyautogui.sleep(1)
+        landmarks = landmarks_points[0].landmark
 
-    # Check for arrow key presses
+        # Find left eye landmarks
+        left_eye_landmarks = landmarks[469:473]
+        left_eye_center = np.mean(np.array([(l.x * frame_w, l.y * frame_h) for l in left_eye_landmarks]), axis=0)
+
+        # Find right eye landmarks
+        right_eye_landmarks = landmarks[474:478]
+        right_eye_center = np.mean(np.array([(l.x * frame_w, l.y * frame_h) for l in right_eye_landmarks]), axis=0)
+
+        # Move mouse based on eye positions
+        move_x = int((left_eye_center[0] + right_eye_center[0]) / 2 - prev_x)
+        move_y = int((left_eye_center[1] + right_eye_center[1]) / 2 - prev_y)
+        pyautogui.move(move_x * 10, move_y * 10, duration=0.1)
+        prev_x, prev_y = (left_eye_center[0] + right_eye_center[0]) / 2, (left_eye_center[1] + right_eye_center[1]) / 2
+
     key = cv2.waitKey(1)
-    if key == 27:   # ESC 입력하면 꺼짐
+    if key == 27:
         break
     elif keyboard.is_pressed('up'):  # Up arrow key
         pyautogui.move(0, -step)
